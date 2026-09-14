@@ -143,3 +143,53 @@ Copied to `models/letter_model.keras` / `models/letter_model.labels.json`.
 All six candidate models (one per arch, plus the two `--augment` variants)
 remain in `models/letter_model_<tag>.keras` for future comparison if the
 dataset or feature representation changes.
+
+## Held-out confusion matrix (`4_evaluate_letter_model.py`)
+
+Re-running the canonical model on the Testing split independently of
+training (`4_evaluate_letter_model.py`, same `load_split` zero-vector
+filtering as training) reproduces the 0.9607 accuracy exactly, and breaks
+down where the remaining ~4% of errors go: they're concentrated in a
+handful of visually similar hand shapes rather than spread evenly across
+all 26 letters. Recall drops most on **S** (0.67 - 33% of S's called Q),
+**W** (0.75 - 15% called M), and **X** (0.92 - 4% called T); every other
+letter is at 95-100% recall. See
+`models/letter_model_confusion_matrix.png`/`.csv` for the full matrix.
+
+## Fingerspelling UI (`4_letter_recognition_ui.py`)
+
+Built a Tkinter desktop UI on top of the same model/pipeline as
+`3_realtime_letter_recognition.py`, to turn single-letter predictions into
+typed words/sentences instead of a one-line video overlay. Design and full
+usage doc: `LETTER_UI.md`. Two things worth recording here because they
+weren't obvious going in:
+
+- **Naive per-frame appending doesn't work.** The classifier runs on every
+  frame independently (no notion of "key up"), so directly appending
+  whatever letter is currently stable would type it dozens of times per
+  second while a shape is held. Fixed with an "armed" latch: a stable
+  letter can only be appended once, and re-arming requires
+  `--release-frames` (default 6) consecutive *not-stable* frames first -
+  i.e. the signer must visibly relax/change the hand shape before the next
+  letter can be typed. This is new, untuned state on top of the
+  already-existing confidence-threshold/smoothing-window logic.
+- **Webcam capture resolution can exceed the screen.** First run rendered
+  the live feed at the camera's native resolution with no cap, which on
+  this machine's webcam produced a frame wide enough to push the entire
+  sidebar (letter/word/autocomplete/sentence panel) off the right edge of
+  the screen - the window looked like it was just a bare video feed with
+  no controls. `cap.set(CAP_PROP_FRAME_WIDTH/HEIGHT)` alone wasn't
+  sufficient (some webcam drivers ignore the request), so the UI also
+  hard-downscales any frame wider than `--video-width` (default 560)
+  before rendering it, independent of what the camera actually delivers.
+  Verified visually via a full-screen screenshot after the fix - sidebar
+  fits alongside the video at the default size.
+
+Autocomplete (`utils/autocomplete.py:WordCompleter`) is backed by a static
+~9,900-word frequency-ranked list (`data/word_list.txt`, filtered from the
+public-domain first20hours/google-10000-english corpus) rather than a live
+dictionary service or an installed NLP package (nltk/wordfreq/etc. were
+all unavailable offline in this environment) - keeps the whole UI usable
+with no network dependency at runtime. Since the list is already
+frequency-sorted, ranking suggestions is just "first N prefix matches",
+no separate scoring step.

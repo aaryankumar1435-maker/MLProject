@@ -10,4 +10,9 @@ dataset_download/
 dataset2_download/
 
 # Local dataset files
-data/
+data/*
+# ...except the small bundled autocomplete word list, which is a code
+# dependency (utils/autocomplete.py), not a downloaded dataset. (Must
+# ignore "data/*", not "data/", for this negation to take effect - git
+# won't re-include a file whose parent directory itself is excluded.)
+!data/word_list.txt
