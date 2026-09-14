@@ -1,0 +1,13 @@
+# Pinned to a verified-compatible set for Python 3.11 on Windows.
+# mediapipe 0.10.x is the last line with the legacy `solutions.holistic`
+# API used by this project (mediapipe>=1.0 removed it); tensorflow 2.16.x
+# and opencv-python 4.10.x are the newest versions still compatible with
+# mediapipe's numpy<2 / protobuf<5 requirement.
+numpy==1.26.4
+protobuf==4.25.3
+opencv-python==4.10.0.84
+mediapipe==0.10.21
+tensorflow==2.16.2
+scikit-learn==1.5.2
+pandas==2.2.3
+pyttsx3==2.98

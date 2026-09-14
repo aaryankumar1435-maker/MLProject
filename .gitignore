@@ -1,0 +1,13 @@
+﻿.venv/
+__pycache__/
+*.pyc
+.env
+.vscode/
+.DS_Store
+
+# Downloaded datasets
+dataset_download/
+dataset2_download/
+
+# Local dataset files
+data/
