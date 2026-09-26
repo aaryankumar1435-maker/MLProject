@@ -35,23 +35,37 @@ plus a few new ones):
 ## Layout
 
 ```
-+---------------------------+  Detected letter
-|                           |    L (0.94)
-|   live webcam feed with   |  Hand detected - ready to type next
-|   hand landmarks drawn    |
-|                           |  Spelling
-|                           |    HEL_
-+---------------------------+
-                               Autocomplete (click, or press 1-5)
-                               [HELP] [HELD] [HELLO] [HELPFUL] [HELPS]
-
-                               Sentence
-                               +-----------------------------+
-                               | I NEED                       |
-                               +-----------------------------+
-                               [Space] [Backspace] [Clear word] [Clear all] [Speak sentence]
-                               [ ] Speak each letter   [x] Speak each word
++---------------------------------------------------------------------------+
+| ISL Fingerspelling -> Text                                  (dark header) |
+| Hold a letter shape steadily to type it - relax your hand between letters |
++---------------------------------------------------------------------------+
+| LIVE CAMERA            | LIVE RECOGNITION                                 |
+| +--------------------+ |  (o) Hand detected - ready to type next          |
+| | webcam feed with   | |  +-----+  Confidence                             |
+| | hand landmarks     | |  |  L  |  [#################-----]  94%          |
+| | drawn on it        | |  +-----+                                         |
+| +--------------------+ | SPELLING                                         |
+|                        |  HEL_                                            |
+|                        |  Autocomplete - click or press 1-5               |
+|                        |  [HELP] [HELD] [HELLO] [HELPFUL] [HELPS]         |
+|                        | SENTENCE                                         |
+|                        |  +--------------------------------------------+  |
+|                        |  | I NEED                                     |  |
+|                        |  +--------------------------------------------+  |
+|                        |  [Space] [Backspace] [Clear Word] [Clear All]    |
+|                        |  [Speak]   [ ] Speak each letter [x] Speak word  |
++---------------------------------------------------------------------------+
+| Space / Backspace / Esc (clear word) work as keyboard keys - 1-5 picks     |
++---------------------------------------------------------------------------+
 ```
+
+The status dot is **green** when the UI is armed (the next held letter
+will be typed), **amber** while it waits for you to release the current
+shape, and **grey** when no hand is in view. The confidence bar shows the
+model's confidence in the current frame's letter.
+
+The window is about 1,260 x 960 pixels at 100% scaling with the default
+`--video-width 560`, so it fits above the taskbar on a 1080p screen.
 
 ## Letter commit model: "hold to type, release to re-arm"
 
@@ -78,9 +92,9 @@ is deliberately no "same letter twice in a row without releasing" path;
 if a word needs a doubled letter (e.g. "HELLO"), briefly relax the hand
 between the two L's.
 
-The right-hand "Hand detected - ready to type next / hold released to
-type next" line reflects `armed` directly, so you can see when it's safe
-to hold the next shape.
+The status line and its coloured dot ("Hand detected - ready to type
+next" in green, "hold released to type next" in amber) reflect `armed`
+directly, so you can see when it's safe to hold the next shape.
 
 ## Autocomplete
 
@@ -116,14 +130,38 @@ the raw spelling as typed.
 | `Space` (button or key) | Finalizes the current word as spelled (or does nothing if nothing's been spelled) and starts a new word |
 | Suggestion button / `1`-`5` | Finalizes the current word as that suggestion instead of the raw spelling |
 | `Backspace` (button or key) | Removes the last letter of the word in progress; if the word in progress is empty, pulls the last *finalized* word out of the sentence back into the in-progress word so it can be corrected |
-| `Clear word` (`Esc`) | Discards the word in progress without touching the finished sentence |
-| `Clear all` | Resets both the word in progress and the whole sentence |
-| `Speak sentence` | Speaks the full sentence so far via TTS (works even with the per-letter/per-word checkboxes off) |
+| `Clear Word` (`Esc`) | Discards the word in progress without touching the finished sentence |
+| `Clear All` | Resets both the word in progress and the whole sentence |
+| `Speak` | Speaks the full sentence so far via TTS (works even with the per-letter/per-word checkboxes off) |
 | `Speak each letter` checkbox | Speaks every committed letter immediately (off by default - fast spelling gets noisy) |
 | `Speak each word` checkbox | Speaks each word once it's finalized via Space or a suggestion (on by default) |
 
 Both speech checkboxes are disabled and inert when the app is launched
 with `--no-speech`.
+
+## Testing without a camera
+
+`tests/ui_smoke_test.py` runs this UI with the webcam replaced by real
+photos from the Testing split. Each letter of a word is held for 20
+frames, then 12 blank frames play (the "relaxed hand" gap). The test
+passes only if the UI types the word exactly, once per letter:
+
+```
+.venv\Scripts\python tests\ui_smoke_test.py HELLO
+.venv\Scripts\python tests\ui_smoke_test.py HELP --screenshot ui.png
+```
+
+`HELLO` is the useful case, because the doubled L only types twice if the
+release-to-re-arm latch works.
+
+## Speed
+
+Each frame is classified with a direct model call,
+`model(x, training=False)`, not `model.predict(x)`. `predict()` builds a
+batching pipeline on every call, which measured about 20x slower on single
+frames (52.8 ms vs 2.6 ms) with identical outputs. With the direct call,
+the UI runs at roughly 18-21 frames per second on this laptop's CPU,
+where MediaPipe Hands is now most of the per-frame cost.
 
 ## Known limitations
 

@@ -193,3 +193,28 @@ all unavailable offline in this environment) - keeps the whole UI usable
 with no network dependency at runtime. Since the list is already
 frequency-sorted, ranking suggestions is just "first N prefix matches",
 no separate scoring step.
+
+## Finishing pass: UI redesign, speed, tests
+
+- **UI redesign committed and verified.** The card-based redesign of
+  `4_letter_recognition_ui.py` (header, live-recognition card with a
+  status dot and confidence bar, spelling card, sentence card, footer
+  hints) was checked end to end with `tests/ui_smoke_test.py`: real
+  Testing photos played in as a fake webcam spell HI, HELP and HELLO, and
+  the UI types each exactly (the doubled L in HELLO confirms the
+  release-to-re-arm latch). A screenshot showed the window was 1,019 px
+  tall, which hid the footer behind the taskbar on a 1080p screen;
+  shrinking the sentence box from 5 to 3 lines brought it to 963 px.
+- **20x faster per-frame inference.** Both live scripts called
+  `model.predict()` on every frame. On 300 real Testing vectors that took
+  52.8 ms per frame, against 2.6 ms for a direct `model(x,
+  training=False)` call, with identical probabilities (max difference 0).
+  `predict()` alone had capped the live loop below 20 frames per second
+  before MediaPipe ran. Both scripts now use the direct call.
+- **One shared `load_split`.** Training and evaluation each had their own
+  copy; both now import `utils/letter_data.py`. Re-running
+  `4_evaluate_letter_model.py` afterwards gave 0.9607 with a confusion
+  matrix identical, count for count, to the saved one.
+- **Tests added** (`tests/`): unit tests for normalization, autocomplete,
+  data loading, the augmentation layer and a model-accuracy check, plus
+  the UI smoke test above.

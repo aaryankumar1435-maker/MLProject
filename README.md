@@ -28,6 +28,7 @@ debugged along the way.
 - [Fingerspelling UI + autocomplete](#fingerspelling-ui--autocomplete)
 - [Word pipeline](#word-pipeline-include-dataset-on-hold) (on hold)
 - [Setup](#setup)
+- [Tests](#tests)
 - [Project structure](#project-structure)
 - [Results](#results)
 - [Known limitations](#known-limitations)
@@ -213,11 +214,25 @@ here) was removed in mediapipe 1.0+, and it requires `numpy<2` /
 together on Windows + Python 3.11 — don't casually bump individual
 packages without re-checking this.
 
+## Tests
+
+```
+.venv\Scripts\python -m unittest discover -s tests -t . -v
+.venv\Scripts\python tests\ui_smoke_test.py HELLO
+```
+
+The unit tests cover landmark normalization, autocomplete, data loading,
+the augmentation layer, and the trained model's accuracy on a sample of
+the Testing split (skipped if the model or data aren't present). The
+smoke test plays real Testing photos into the UI as a fake webcam and
+checks that it types the word exactly.
+
 ## Project structure
 
 ```
 MLProject/
 ├── README.md                              this file
+├── docs/PROJECT_GUIDE.md                  plain-language guide to the whole project
 ├── TRAINING_LOG.md                        lab notebook: dataset versions, bugs found, model comparisons
 ├── LETTER_UI.md                           fingerspelling UI: design, flags, controls, limitations
 ├── letter_recognition_architecture.docx   full design doc, letter pipeline
@@ -229,6 +244,7 @@ MLProject/
 │   ├── mp_utils.py           MediaPipe Holistic setup, 258-d feature extraction, SEQ_LEN/FEATURE_DIM
 │   ├── custom_layers.py      RandomLandmarkAugment, AddPositionEmbedding (registered Keras layers)
 │   ├── autocomplete.py       WordCompleter — frequency-ranked prefix autocomplete
+│   ├── letter_data.py        load_split — loads a letter split for training and evaluation
 │   └── tts_utils.py          SpeechWorker — non-blocking background TTS, shared by both pipelines
 │
 ├── 1_extract_letter_landmarks.py    letters, stage 1
@@ -236,6 +252,10 @@ MLProject/
 ├── 3_realtime_letter_recognition.py letters, stage 3 (CLI overlay)
 ├── 4_evaluate_letter_model.py       letters, stage 4 (confusion matrix)
 ├── 4_letter_recognition_ui.py       letters, stage 4 (desktop UI + autocomplete)
+│
+├── tests/
+│   ├── test_letter_pipeline.py      unit tests: normalization, autocomplete, data loading, model accuracy
+│   └── ui_smoke_test.py             runs the UI with test photos as a fake camera
 │
 ├── 1_extract_landmarks.py           words, stage 1
 ├── 2_train_model.py                 words, stage 2
@@ -308,6 +328,7 @@ doc before resuming this pipeline.
 
 | Doc | Covers |
 |---|---|
+| `docs/PROJECT_GUIDE.md` | Plain-language guide: how to run it, the workflow, the tech stack, the logic, and what every file does |
 | `README.md` (this file) | Project overview, tech stack, workflow, setup, results |
 | `TRAINING_LOG.md` | Dataset versions, bugs found and fixed, full model-architecture comparison, UI build notes — the chronological "what actually happened" record |
 | `LETTER_UI.md` | Fingerspelling UI: every flag, the letter-commit state machine, autocomplete internals, editing controls, limitations |

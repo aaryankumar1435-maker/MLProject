@@ -1,9 +1,10 @@
 """Stage 4 (letters) - Confusion matrix and per-letter accuracy for the
 canonical letter model, on the held-out Testing split.
 
-Reuses the same load_split logic as 2_train_letter_model.py (zero-vector
-filtering, per-hand landmark normalization) so the evaluated accuracy
-matches what training reported, then renders a confusion-matrix heatmap.
+Uses the same load_split (utils/letter_data.py) as 2_train_letter_model.py
+(zero-vector filtering, per-hand landmark normalization) so the evaluated
+accuracy matches what training reported, then renders a confusion-matrix
+heatmap.
 """
 import argparse
 import csv
@@ -16,28 +17,7 @@ import tensorflow as tf
 from sklearn.metrics import ConfusionMatrixDisplay, classification_report, confusion_matrix
 
 import utils.custom_layers  # noqa: F401 - registers RandomLandmarkAugment/AddPositionEmbedding for model loading
-from utils.hand_utils import normalize_landmarks
-
-
-def load_split(processed_dir: Path, manifest_rows, label_to_index, split_name):
-    sequences, targets = [], []
-    skipped = 0
-    for row in manifest_rows:
-        if row["split"] != split_name:
-            continue
-        raw = np.load(processed_dir / row["path"])
-        if not np.any(raw):
-            skipped += 1
-            continue
-        sequences.append(normalize_landmarks(raw))
-        targets.append(label_to_index[row["label"]])
-
-    if skipped:
-        print(f"  [{split_name}] skipped {skipped} samples with no hand detected")
-
-    X = np.stack(sequences).astype(np.float32)
-    y = np.array(targets, dtype=np.int64)
-    return X, y
+from utils.letter_data import load_split
 
 
 def main():
